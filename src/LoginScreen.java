@@ -109,7 +109,7 @@ public class LoginScreen extends JFrame {
                 g2d.setColor(Color.WHITE);
                 g2d.setFont(new Font("Arial", Font.BOLD, 32));
                 FontMetrics fm = g2d.getFontMetrics();
-                String symbol = "∞";
+                String symbol = "\u221E"; // Infinity symbol
                 g2d.drawString(symbol, (60 - fm.stringWidth(symbol)) / 2, ((60 - fm.getAscent()) / 2) + fm.getAscent());
             }
         };
@@ -167,7 +167,8 @@ public class LoginScreen extends JFrame {
         userTypePanel.setLayout(new GridLayout(1, 2, 10, 0));
         userTypePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        userTypeCombo = new JComboBox<>(new String[]{"Buyer", "Seller"});
+        String[] accountTypes = {"Buyer", "Seller"};
+        userTypeCombo = new JComboBox<String>(accountTypes);
         styleComboBox(userTypeCombo);
         userTypePanel.add(userTypeCombo);
 
@@ -213,11 +214,14 @@ public class LoginScreen extends JFrame {
         showPasswordCheckbox.setOpaque(false);
         showPasswordCheckbox.setForeground(SUBTEXT_COLOR);
         showPasswordCheckbox.setFont(new Font("Arial", Font.PLAIN, 11));
-        showPasswordCheckbox.addActionListener(e -> {
-            if (showPasswordCheckbox.isSelected()) {
-                passwordField.setEchoChar((char) 0);
-            } else {
-                passwordField.setEchoChar('●');
+        showPasswordCheckbox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (showPasswordCheckbox.isSelected()) {
+                    passwordField.setEchoChar((char) 0);
+                } else {
+                    passwordField.setEchoChar('\u25CF'); // Bullet point
+                }
             }
         });
         panel.add(showPasswordCheckbox);
@@ -240,11 +244,21 @@ public class LoginScreen extends JFrame {
         buttonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
         loginButton = createButton("Sign In");
-        loginButton.addActionListener(e -> handleLogin());
+        loginButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleLogin();
+            }
+        });
 
         clearButton = createButton("Clear");
         clearButton.setBackground(new Color(55, 65, 81));
-        clearButton.addActionListener(e -> clearFields());
+        clearButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                clearFields();
+            }
+        });
 
         buttonPanel.add(loginButton);
         buttonPanel.add(clearButton);
@@ -355,14 +369,31 @@ public class LoginScreen extends JFrame {
         String validPassword = "password123";
 
         if (username.equals(validUsername) && password.equals(validPassword)) {
+            String message = "Welcome " + userType + "!\n\n" + username + "\n\nOpening Product Catalog...";
             JOptionPane.showMessageDialog(this,
-                    "Welcome " + userType + "!\n\nLogin successful.",
-                    "Success",
+                    message,
+                    "Login Successful",
                     JOptionPane.INFORMATION_MESSAGE);
-            clearFields();
+
+            // Navigate to ProductCatalog
+            openProductCatalog(userType, username);
+
         } else {
             errorLabel.setText("Invalid username or password");
         }
+    }
+
+    private void openProductCatalog(String userType, String username) {
+        // Close the login screen
+        this.dispose();
+
+        // Open the ProductCatalog with user info
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new ProductCatalog(userType, username);
+            }
+        });
     }
 
     private void clearFields() {
@@ -370,11 +401,16 @@ public class LoginScreen extends JFrame {
         usernameField.setForeground(SUBTEXT_COLOR);
         passwordField.setText("");
         showPasswordCheckbox.setSelected(false);
-        passwordField.setEchoChar('●');
+        passwordField.setEchoChar('\u25CF'); // Bullet point
         errorLabel.setText("");
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new LoginScreen());
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new LoginScreen();
+            }
+        });
     }
 }
