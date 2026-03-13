@@ -11,7 +11,6 @@ public class ShoppingCart extends JFrame {
     private JLabel subtotalLabel;
     private JLabel taxLabel;
     private JLabel totalLabel;
-    private JButton updateButton;
     private JButton removeButton;
     private JButton checkoutButton;
     private JButton continueShoppingButton;
@@ -180,16 +179,6 @@ public class ShoppingCart extends JFrame {
 
         JPanel toolbarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         toolbarPanel.setOpaque(false);
-
-        updateButton = createIconButton("Update Cart");
-        updateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                refreshCartTable();
-                JOptionPane.showMessageDialog(ShoppingCart.this, "Cart updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-            }
-        });
-        toolbarPanel.add(updateButton);
 
         removeButton = createIconButton("Remove Item");
         removeButton.setBackground(WARNING_COLOR);
