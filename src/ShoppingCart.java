@@ -26,8 +26,12 @@ public class ShoppingCart extends JFrame {
     private static final Color ACCENT_PURPLE_DARK = new Color(126, 34, 206);
     private static final Color TEXT_COLOR = new Color(240, 240, 245);
     private static final Color SUBTEXT_COLOR = new Color(156, 163, 175);
+    private static final Color SUCCESS_COLOR_ACCENT = new Color(85, 193, 125);
     private static final Color SUCCESS_COLOR = new Color(34, 197, 94);
+    private static final Color WARNING_COLOR_ACCENT = new Color(244, 82, 82);
     private static final Color WARNING_COLOR = new Color(239, 68, 68);
+    private static final Color DEFAULT_COLOR_ACCENT = new Color(40, 46, 58);
+    private static final Color DEFAULT_COLOR = new Color(55, 65, 81);
 
     private static final double TAX_RATE = 0.08; // 8% tax
 
@@ -296,7 +300,7 @@ public class ShoppingCart extends JFrame {
         panel.add(profileButton);
 
         continueShoppingButton = createIconButton("Continue Shopping");
-        continueShoppingButton.setBackground(new Color(55, 65, 81));
+        continueShoppingButton.setBackground(DEFAULT_COLOR);
         continueShoppingButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -427,20 +431,58 @@ public class ShoppingCart extends JFrame {
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setOpaque(true);
+        if (text.equals("Proceed to Checkout")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(SUCCESS_COLOR_ACCENT);
+                }
 
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (!button.getBackground().equals(new Color(55, 65, 81)) && !button.getBackground().equals(SUCCESS_COLOR)) {
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(SUCCESS_COLOR);
+                }
+            });
+        }
+        else if (text.equals("Remove Item")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(WARNING_COLOR_ACCENT);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(WARNING_COLOR);
+                }
+            });
+        }
+        else if (text.equals("Update Cart") || text.equals("My Profile")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
                     button.setBackground(ACCENT_PURPLE_DARK);
                 }
-            }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                // Keep original color
-            }
-        });
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(ACCENT_PURPLE);
+                }
+            });
+        }
+        else {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(DEFAULT_COLOR_ACCENT);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(DEFAULT_COLOR);
+                }
+            });
+        }
 
         return button;
     }

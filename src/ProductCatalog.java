@@ -27,10 +27,12 @@ public class ProductCatalog extends JFrame {
     private static final Color ACCENT_PURPLE_DARK = new Color(126, 34, 206);
     private static final Color TEXT_COLOR = new Color(240, 240, 245);
     private static final Color SUBTEXT_COLOR = new Color(156, 163, 175);
-    private static final Color SUCCESS_COLOR = new Color(34, 197, 94);
+    private static final Color SUCCESS_COLOR_ACCENT = new Color(10, 197, 125, 255);
+    private static final Color SUCCESS_COLOR = new Color(10, 197, 94);
+    private static final Color WARNING_COLOR_ACCENT = new Color(239, 88, 68);
     private static final Color WARNING_COLOR = new Color(239, 68, 68);
 
-    private ArrayList<Product> productDatabase;
+    private ArrayList<ProductManager.Product> productDatabase;
 
     public ProductCatalog(String userType, String username) {
         this.currentUserType = userType;
@@ -39,6 +41,9 @@ public class ProductCatalog extends JFrame {
         this.cartManager.setUsername(username);
         this.cartManager.setUserType(userType);
         this.productManager = ProductManager.getInstance();
+        productDatabase = new ArrayList<>();
+        productDatabase = ProductManager.getInstance().getAllProducts();
+
 
         setTitle("NEXUS - Product Catalog");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -325,17 +330,45 @@ public class ProductCatalog extends JFrame {
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setOpaque(true);
 
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(ACCENT_PURPLE_DARK);
-            }
+        if (text.equals("+ Add to Cart") || text.equals("+ Add Product")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(SUCCESS_COLOR_ACCENT);
+                }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(ACCENT_PURPLE);
-            }
-        });
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(SUCCESS_COLOR);
+                }
+            });
+        }
+        else if (text.equals("Delete")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(WARNING_COLOR_ACCENT);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(WARNING_COLOR);
+                }
+            });
+        }
+        else {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(ACCENT_PURPLE_DARK);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(ACCENT_PURPLE);
+                }
+            });
+        }
 
         return button;
     }
@@ -417,7 +450,7 @@ public class ProductCatalog extends JFrame {
             return;
         }
 
-        Product product = productDatabase.get(selectedRow);
+        ProductManager.Product product = productDatabase.get(selectedRow);
 
         JDialog dialog = new JDialog(this, "Product Details", true);
         dialog.setSize(500, 400);
@@ -754,7 +787,7 @@ public class ProductCatalog extends JFrame {
         double totalRevenue = 0;
         int productsSold = 0;
 
-        for (Product p : productDatabase) {
+        for (ProductManager.Product p : productDatabase) {
             if (p.getSeller().equals(currentUsername)) {
                 totalProducts++;
                 totalStock += p.getStock();
@@ -771,7 +804,7 @@ public class ProductCatalog extends JFrame {
                 "Average Product Price: $" + String.format("%.2f",
                 totalProducts > 0 ? productDatabase.stream()
                         .filter(p -> p.getSeller().equals(currentUsername))
-                        .mapToDouble(Product::getPrice)
+                        .mapToDouble(ProductManager.Product::getPrice)
                         .average()
                         .orElse(0) : 0);
 
@@ -793,40 +826,5 @@ public class ProductCatalog extends JFrame {
                 new ProductCatalog("Buyer", "buyer1");
             }
         });
-    }
-
-    // Product model
-    static class Product {
-        private int id;
-        private String name;
-        private String seller;
-        private double price;
-        private String description;
-        private int stock;
-        private String category;
-
-        public Product(int id, String name, String seller, double price, String description, int stock, String category) {
-            this.id = id;
-            this.name = name;
-            this.seller = seller;
-            this.price = price;
-            this.description = description;
-            this.stock = stock;
-            this.category = category;
-        }
-
-        public int getId() { return id; }
-        public String getName() { return name; }
-        public String getSeller() { return seller; }
-        public double getPrice() { return price; }
-        public String getDescription() { return description; }
-        public int getStock() { return stock; }
-        public String getCategory() { return category; }
-
-        public void setName(String name) { this.name = name; }
-        public void setPrice(double price) { this.price = price; }
-        public void setDescription(String description) { this.description = description; }
-        public void setStock(int stock) { this.stock = stock; }
-        public void setCategory(String category) { this.category = category; }
     }
 }

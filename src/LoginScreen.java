@@ -2,7 +2,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
 
 public class LoginScreen extends JFrame {
     private JTextField usernameField;
@@ -20,6 +19,8 @@ public class LoginScreen extends JFrame {
     private static final Color ACCENT_PURPLE_DARK = new Color(126, 34, 206);
     private static final Color TEXT_COLOR = new Color(240, 240, 245);
     private static final Color SUBTEXT_COLOR = new Color(156, 163, 175);
+    private static final Color CLEAR_TEXT_COLOR_ACCENT = new Color(32, 39, 48);
+    private static final Color CLEAR_TEXT_COLOR = new Color(55, 65, 81);
 
     public LoginScreen() {
         setTitle("NEXUS Login - E-Commerce Platform");
@@ -66,12 +67,12 @@ public class LoginScreen extends JFrame {
 
         // Header section
         JPanel headerPanel = createHeaderPanel();
-        headerPanel.setBounds(0, 20, 500, 100);
+        headerPanel.setBounds(0, 20, 500, 150);
         mainPanel.add(headerPanel);
 
         // Card panel
         JPanel cardPanel = createCardPanel();
-        cardPanel.setBounds(30, 130, 440, 480);
+        cardPanel.setBounds(23, 180, 440, 430);
         mainPanel.add(cardPanel);
 
         add(mainPanel);
@@ -109,7 +110,7 @@ public class LoginScreen extends JFrame {
                 g2d.setColor(Color.WHITE);
                 g2d.setFont(new Font("Arial", Font.BOLD, 32));
                 FontMetrics fm = g2d.getFontMetrics();
-                String symbol = "\u221E"; // Infinity symbol
+                String symbol = "∞"; // Infinity symbol
                 g2d.drawString(symbol, (60 - fm.stringWidth(symbol)) / 2, ((60 - fm.getAscent()) / 2) + fm.getAscent());
             }
         };
@@ -158,7 +159,7 @@ public class LoginScreen extends JFrame {
         panel.setBorder(new EmptyBorder(30, 25, 25, 25));
 
         // User Type Section
-        JLabel userTypeLabel = createLabel("ACCOUNT TYPE", 11);
+        JLabel userTypeLabel = createLabel("ACCOUNT TYPE");
         panel.add(userTypeLabel);
         panel.add(Box.createVerticalStrut(10));
 
@@ -176,7 +177,7 @@ public class LoginScreen extends JFrame {
         panel.add(Box.createVerticalStrut(20));
 
         // Username Section
-        JLabel usernameLabel = createLabel("USERNAME", 11);
+        JLabel usernameLabel = createLabel("USERNAME");
         panel.add(usernameLabel);
         panel.add(Box.createVerticalStrut(8));
 
@@ -193,7 +194,7 @@ public class LoginScreen extends JFrame {
         panel.add(Box.createVerticalStrut(15));
 
         // Password Section
-        JLabel passwordLabel = createLabel("PASSWORD", 11);
+        JLabel passwordLabel = createLabel("PASSWORD");
         panel.add(passwordLabel);
         panel.add(Box.createVerticalStrut(8));
 
@@ -220,7 +221,7 @@ public class LoginScreen extends JFrame {
                 if (showPasswordCheckbox.isSelected()) {
                     passwordField.setEchoChar((char) 0);
                 } else {
-                    passwordField.setEchoChar('\u25CF'); // Bullet point
+                    passwordField.setEchoChar('●'); // Bullet point
                 }
             }
         });
@@ -252,7 +253,7 @@ public class LoginScreen extends JFrame {
         });
 
         clearButton = createButton("Clear");
-        clearButton.setBackground(new Color(55, 65, 81));
+        clearButton.setBackground(CLEAR_TEXT_COLOR);
         clearButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -268,9 +269,9 @@ public class LoginScreen extends JFrame {
         return panel;
     }
 
-    private JLabel createLabel(String text, int size) {
+    private JLabel createLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Arial", Font.BOLD, size));
+        label.setFont(new Font("Arial", Font.BOLD, 11));
         label.setForeground(SUBTEXT_COLOR);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
@@ -332,17 +333,32 @@ public class LoginScreen extends JFrame {
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setOpaque(true);
 
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(ACCENT_PURPLE_DARK);
-            }
+        if (!text.equals("Clear")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(ACCENT_PURPLE_DARK);
+                }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(ACCENT_PURPLE);
-            }
-        });
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(ACCENT_PURPLE);
+                }
+            });
+        }
+        else {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(CLEAR_TEXT_COLOR_ACCENT);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(CLEAR_TEXT_COLOR);
+                }
+            });
+        }
 
         return button;
     }
@@ -359,7 +375,7 @@ public class LoginScreen extends JFrame {
             return;
         }
 
-        if (password.isEmpty() || password.length() < 6) {
+        if (password.length() < 6) {
             errorLabel.setText("Password must be at least 6 characters");
             return;
         }
@@ -401,7 +417,7 @@ public class LoginScreen extends JFrame {
         usernameField.setForeground(SUBTEXT_COLOR);
         passwordField.setText("");
         showPasswordCheckbox.setSelected(false);
-        passwordField.setEchoChar('\u25CF'); // Bullet point
+        passwordField.setEchoChar('●'); // Bullet point
         errorLabel.setText("");
     }
 

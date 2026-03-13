@@ -16,6 +16,7 @@ public class OrderProcessing extends JFrame {
     private String currentUsername;
     private String currentUserType;
     private CartManager cartManager;
+    private ProductManager productManager;
 
     // Color scheme
     private static final Color BG_COLOR = new Color(10, 10, 15);
@@ -33,6 +34,7 @@ public class OrderProcessing extends JFrame {
         this.currentUsername = username;
         this.currentUserType = userType;
         this.cartManager = CartManager.getInstance();
+        this.productManager = ProductManager.getInstance();
 
         initializeDatabase();
 
@@ -52,10 +54,16 @@ public class OrderProcessing extends JFrame {
         // Show cart items as a preview order (order ID will be assigned on confirm)
         ArrayList<CartManager.CartItem> cartItems = cartManager.getCartItems();
         if (!cartItems.isEmpty()) {
-            ArrayList<String> items = new ArrayList<>();
+            ArrayList<OrderHistory.OrderItem> items = new ArrayList<>();
             double totalAmount = 0;
+
             for (CartManager.CartItem item : cartItems) {
-                items.add(item.getProductName());
+                // Get the seller for this product
+                ProductManager.Product product = productManager.getProduct(item.getProductId());
+                String seller = product != null ? product.getSeller() : "Unknown";
+
+                // Create order item with seller info
+                items.add(new OrderHistory.OrderItem(item.getProductName(), seller));
                 totalAmount += item.getTotalPrice();
             }
 
@@ -64,7 +72,7 @@ public class OrderProcessing extends JFrame {
             double finalTotal = totalAmount + tax;
 
             Order previewOrder = new Order(
-                    0, // Temporary ID, will be replaced on confirm
+                    0,
                     currentUsername,
                     currentUsername + "@email.com",
                     "123 Main St, Apt 4, New York, NY 10001",
@@ -406,13 +414,18 @@ public class OrderProcessing extends JFrame {
 
         if (result == JOptionPane.YES_OPTION) {
             // Create order from cart items
-            ArrayList<String> items = new ArrayList<>();
+            ArrayList<OrderHistory.OrderItem> items = new ArrayList<>();
             for (CartManager.CartItem item : cartItems) {
-                items.add(item.getProductName());
+                // Get the seller for this product
+                ProductManager.Product product = productManager.getProduct(item.getProductId());
+                String seller = product != null ? product.getSeller() : "Unknown";
+
+                // Create order item with seller info
+                items.add(new OrderHistory.OrderItem(item.getProductName(), seller));
             }
 
-            // Get next order ID
-            int orderId = 1001;
+// Get next order ID
+            int orderId = OrderHistory.getNextOrderId();
 
             // Create order record
             OrderHistory.OrderRecord orderRecord = new OrderHistory.OrderRecord(
@@ -462,10 +475,10 @@ public class OrderProcessing extends JFrame {
         }
     }
 
-    private String joinItems(ArrayList<String> items) {
+    private String joinItems(ArrayList<OrderHistory.OrderItem> items) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < items.size(); i++) {
-            sb.append(items.get(i));
+            sb.append(items.get(i).getProductName());
             if (i < items.size() - 1) {
                 sb.append(", ");
             }
@@ -525,18 +538,19 @@ public class OrderProcessing extends JFrame {
         });
     }
 
-    // Order model
+    // Order model with seller tracking
     static class Order {
         private int orderId;
         private String buyerUsername;
         private String email;
         private String deliveryAddress;
-        private ArrayList<String> items;
+        private ArrayList<OrderHistory.OrderItem> items;
         private double totalAmount;
         private String status;
         private String orderDate;
 
-        public Order(int orderId, String buyerUsername, String email, String deliveryAddress, ArrayList<String> items, double totalAmount, String status, String orderDate) {
+        public Order(int orderId, String buyerUsername, String email, String deliveryAddress,
+                     ArrayList<OrderHistory.OrderItem> items, double totalAmount, String status, String orderDate) {
             this.orderId = orderId;
             this.buyerUsername = buyerUsername;
             this.email = email;
@@ -547,15 +561,40 @@ public class OrderProcessing extends JFrame {
             this.orderDate = orderDate;
         }
 
-        public int getOrderId() { return orderId; }
-        public String getBuyerUsername() { return buyerUsername; }
-        public String getEmail() { return email; }
-        public String getDeliveryAddress() { return deliveryAddress; }
-        public ArrayList<String> getItems() { return items; }
-        public double getTotalAmount() { return totalAmount; }
-        public String getStatus() { return status; }
-        public String getOrderDate() { return orderDate; }
+        public int getOrderId() {
+            return orderId;
+        }
 
-        public void setStatus(String status) { this.status = status; }
+        public String getBuyerUsername() {
+            return buyerUsername;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public String getDeliveryAddress() {
+            return deliveryAddress;
+        }
+
+        public ArrayList<OrderHistory.OrderItem> getItems() {
+            return items;
+        }
+
+        public double getTotalAmount() {
+            return totalAmount;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public String getOrderDate() {
+            return orderDate;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
     }
 }

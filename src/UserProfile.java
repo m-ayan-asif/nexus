@@ -18,6 +18,9 @@ public class UserProfile extends JFrame {
     private String currentUsername;
     private String currentUserType;
     private CartManager cartManager;
+    // Seller order management
+    private JTable sellerOrdersTable;
+    private DefaultTableModel sellerOrderTableModel;
 
     // Color scheme
     private static final Color BG_COLOR = new Color(10, 10, 15);
@@ -26,8 +29,10 @@ public class UserProfile extends JFrame {
     private static final Color ACCENT_PURPLE_DARK = new Color(126, 34, 206);
     private static final Color TEXT_COLOR = new Color(240, 240, 245);
     private static final Color SUBTEXT_COLOR = new Color(156, 163, 175);
-    private static final Color SUCCESS_COLOR = new Color(34, 197, 94);
+    private static final Color WARNING_COLOR_ACCENT = new Color(244, 82, 82);
     private static final Color WARNING_COLOR = new Color(239, 68, 68);
+    private static final Color DEFAULT_COLOR_ACCENT = new Color(40, 46, 58);
+    private static final Color DEFAULT_COLOR = new Color(55, 65, 81);
 
     private ArrayList<Address> addressBook;
     private ArrayList<OrderHistory> orderHistory;
@@ -57,6 +62,196 @@ public class UserProfile extends JFrame {
 
         // Initialize order history
         orderHistory = new ArrayList<>();
+    }
+
+
+    private JPanel createSellerOrdersPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(15, 0, 0, 0));
+
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setOpaque(false);
+
+        JLabel infoLabel = new JLabel("Manage orders containing your products");
+        infoLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        infoLabel.setForeground(SUBTEXT_COLOR);
+        topPanel.add(infoLabel, BorderLayout.WEST);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton updateStatusButton = createIconButton("Update Status");
+        updateStatusButton.addActionListener(e -> updateOrderStatus());
+        buttonPanel.add(updateStatusButton);
+        topPanel.add(buttonPanel, BorderLayout.EAST);
+
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        String[] columnNames = {"Order ID", "Buyer", "Your Items", "Total", "Status"};
+        sellerOrderTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        refreshSellerOrderTable();
+
+        sellerOrdersTable = new JTable(sellerOrderTableModel);
+        sellerOrdersTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        styleTable(sellerOrdersTable);
+
+        JScrollPane scrollPane = new JScrollPane(sellerOrdersTable);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.setBackground(CARD_COLOR);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(55, 65, 81), 1));
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private void refreshSellerOrderTable() {
+        sellerOrderTableModel.setRowCount(0);
+        ArrayList<OrderHistory.OrderRecord> sellerOrders = OrderHistory.getInstance()
+                .getSellerOrders(currentUsername);
+
+        for (OrderHistory.OrderRecord order : sellerOrders) {
+            // Get only items sold by this seller
+            ArrayList<OrderHistory.OrderItem> sellerItems = order.getSellerItems(currentUsername);
+            StringBuilder itemsStr = new StringBuilder();
+            for (int i = 0; i < sellerItems.size(); i++) {
+                itemsStr.append(sellerItems.get(i).getProductName());
+                if (i < sellerItems.size() - 1) itemsStr.append(", ");
+            }
+
+            Object[] row = {
+                    order.getOrderId(),
+                    order.getBuyerUsername(),
+                    itemsStr.toString(),
+                    String.format("$%.2f", order.getTotalAmount()),
+                    order.getStatus()
+            };
+            sellerOrderTableModel.addRow(row);
+        }
+    }
+
+    private void updateOrderStatus() {
+        int selectedRow = sellerOrdersTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select an order to update",
+                    "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int orderId = (int) sellerOrderTableModel.getValueAt(selectedRow, 0);
+        String currentStatus = (String) sellerOrderTableModel.getValueAt(selectedRow, 4);
+
+        // Find the order
+        OrderHistory.OrderRecord order = null;
+        for (OrderHistory.OrderRecord o : OrderHistory.getInstance().getAllOrders()) {
+            if (o.getOrderId() == orderId) {
+                order = o;
+                break;
+            }
+        }
+
+        if (order == null) return;
+
+        // Show status options
+        String[] statusOptions = {"Processing", "Shipped", "Delivered", "Cancelled"};
+        String newStatus = (String) JOptionPane.showInputDialog(this,
+                "Update order status:\n\nCurrent: " + currentStatus,
+                "Order #" + orderId + " - Update Status",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                statusOptions,
+                currentStatus);
+
+        if (newStatus != null && !newStatus.equals(currentStatus)) {
+            order.setStatus(newStatus);
+            refreshSellerOrderTable();
+            JOptionPane.showMessageDialog(this,
+                    "Order status updated to: " + newStatus,
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+// ============ SALES DASHBOARD PANEL ============
+
+    private JPanel createSalesDashboardPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(15, 0, 0, 0));
+
+        JLabel infoLabel = new JLabel("Your sales analytics and metrics");
+        infoLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        infoLabel.setForeground(SUBTEXT_COLOR);
+        panel.add(infoLabel, BorderLayout.NORTH);
+
+        JPanel statsPanel = new JPanel(new GridLayout(1, 3, 15, 0));
+        statsPanel.setOpaque(false);
+
+        ArrayList<OrderHistory.OrderRecord> sellerOrders =
+                OrderHistory.getInstance().getSellerOrders(currentUsername);
+        double totalRevenue = 0;
+        int totalOrders = sellerOrders.size();
+
+        for (OrderHistory.OrderRecord order : sellerOrders) {
+            if (order.containsSellerProduct(currentUsername)) {
+                totalRevenue += order.getTotalAmount();
+            }
+        }
+
+        double averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+        statsPanel.add(createStatCard("Total Orders", "", String.valueOf(totalOrders)));
+        statsPanel.add(createStatCard("Total Revenue", "", String.format("$%.2f", totalRevenue)));
+        statsPanel.add(createStatCard("Avg Order Value", "", String.format("$%.2f", averageOrderValue)));
+
+        panel.add(statsPanel, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createStatCard(String title, String subtitle, String value) {
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                g2d.setColor(CARD_COLOR);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+
+                g2d.setColor(new Color(168, 85, 247, 50));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+            }
+        };
+        card.setOpaque(false);
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        titleLabel.setForeground(ACCENT_PURPLE);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(new Font("Georgia", Font.BOLD, 24));
+        valueLabel.setForeground(TEXT_COLOR);
+        valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(titleLabel);
+        card.add(Box.createVerticalStrut(8));
+        card.add(valueLabel);
+
+        return card;
     }
 
     private void initializeUI() {
@@ -95,9 +290,16 @@ public class UserProfile extends JFrame {
         tabbedPane.setForeground(TEXT_COLOR);
         tabbedPane.setFont(new Font("Arial", Font.PLAIN, 12));
 
-        tabbedPane.addTab("Order History", createOrderHistoryPanel());
-        tabbedPane.addTab("Address Book", createAddressBookPanel());
-        tabbedPane.addTab("Account Settings", createAccountSettingsPanel());
+        // Add tabs based on user type
+        if (currentUserType.equals("Buyer")) {
+            tabbedPane.addTab("Order History", createOrderHistoryPanel());
+            tabbedPane.addTab("Address Book", createAddressBookPanel());
+            tabbedPane.addTab("Account Settings", createAccountSettingsPanel());
+        } else if (currentUserType.equals("Seller")) {
+            tabbedPane.addTab("Order Management", createSellerOrdersPanel());
+            tabbedPane.addTab("Sales Dashboard", createSalesDashboardPanel());
+            tabbedPane.addTab("Account Settings", createAccountSettingsPanel());
+        }
 
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
@@ -478,7 +680,7 @@ public class UserProfile extends JFrame {
         panel.setOpaque(false);
 
         JButton backButton = createIconButton("Back to Shopping");
-        backButton.setBackground(new Color(55, 65, 81));
+        backButton.setBackground(DEFAULT_COLOR);
         backButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -508,7 +710,7 @@ public class UserProfile extends JFrame {
             ArrayList<OrderHistory.OrderRecord> userOrders = OrderHistory.getInstance().getUserOrders(currentUsername);
             for (OrderHistory.OrderRecord order : userOrders) {
                 StringBuilder itemsStr = new StringBuilder();
-                ArrayList<String> items = order.getItems();
+                ArrayList<String> items = order.getItemsAsStrings();
                 for (int i = 0; i < items.size(); i++) {
                     itemsStr.append(items.get(i));
                     if (i < items.size() - 1) {
@@ -554,7 +756,7 @@ public class UserProfile extends JFrame {
         OrderHistory.OrderRecord order = userOrders.get(selectedRow);
 
         StringBuilder itemsStr = new StringBuilder();
-        for (String item : order.getItems()) {
+        for (String item : order.getItemsAsStrings()) {
             itemsStr.append(item).append("\n");
         }
 
@@ -767,19 +969,45 @@ public class UserProfile extends JFrame {
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setOpaque(true);
 
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (!button.getBackground().equals(new Color(55, 65, 81)) && !button.getBackground().equals(WARNING_COLOR)) {
+        if (text.equals("Logout") || text.equals("Deactivate Account") || text.equals("Delete")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(WARNING_COLOR_ACCENT);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(WARNING_COLOR);
+                }
+            });
+        }
+        else if (text.equals("View Details") || text.equals("Update Password") || text.equals("Save Preferences") || text.equals("Track Order") || text.equals("+ Add Address") || text.equals("Edit") || text.equals("Update Status")) {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
                     button.setBackground(ACCENT_PURPLE_DARK);
                 }
-            }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                // Keep original color
-            }
-        });
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(ACCENT_PURPLE);
+                }
+            });
+        }
+        else {
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(DEFAULT_COLOR_ACCENT);
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(DEFAULT_COLOR);
+                }
+            });
+        }
 
         return button;
     }
@@ -812,28 +1040,4 @@ public class UserProfile extends JFrame {
         public String getContactName() { return contactName; }
         public String getPhone() { return phone; }
     }
-
-    // Order History model
-//    static class OrderHistory {
-//        private int orderId;
-//        private String date;
-//        private String items;
-//        private double total;
-//        private String status;
-//
-//        public OrderHistory(int orderId, String date, String items, double total, String status) {
-//            this.orderId = orderId;
-//            this.date = date;
-//            this.items = items;
-//            this.total = total;
-//            this.status = status;
-//        }
-//
-//
-//        public int getOrderId() { return orderId; }
-//        public String getDate() { return date; }
-//        public String getItems() { return items; }
-//        public double getTotal() { return total; }
-//        public String getStatus() { return status; }
-//    }
 }
