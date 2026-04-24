@@ -331,6 +331,7 @@ public class OrderProcessing extends JFrame {
         addDetailField(panel, "Order ID:", String.valueOf(order.getOrderId()));
         addDetailField(panel, "Date:", order.getOrderDate());
         addDetailField(panel, "Status:", order.getStatus());
+        addDetailField(panel, "Payment Method:", order.getPaymentMethod());
         addDetailField(panel, "Delivery Address:", order.getDeliveryAddress());
         addDetailField(panel, "Items:", joinItems(order.getItems()));
         addDetailField(panel, "Total Amount:", "$" + String.format("%.2f", order.getTotalAmount()));
@@ -389,6 +390,84 @@ public class OrderProcessing extends JFrame {
         });
     }
 
+    private String showPaymentDialog(double total) {
+        JDialog paymentDialog = new JDialog(this, "Select Payment Method", true);
+        paymentDialog.setSize(420, 300);
+        paymentDialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(new EmptyBorder(25, 25, 25, 25));
+        panel.setBackground(CARD_COLOR);
+
+        JLabel titleLabel = new JLabel("Payment Method");
+        titleLabel.setFont(new Font("Georgia", Font.BOLD, 20));
+        titleLabel.setForeground(TEXT_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel totalLabel = new JLabel("Order Total: $" + String.format("%.2f", total));
+        totalLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        totalLabel.setForeground(SUBTEXT_COLOR);
+        totalLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JRadioButton codRadio = new JRadioButton("  Cash on Delivery (COD)");
+        codRadio.setFont(new Font("Arial", Font.BOLD, 14));
+        codRadio.setForeground(TEXT_COLOR);
+        codRadio.setBackground(CARD_COLOR);
+        codRadio.setSelected(true);
+        codRadio.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        ButtonGroup group = new ButtonGroup();
+        group.add(codRadio);
+
+        JLabel codDesc = new JLabel("  Pay cash when your order arrives at your doorstep.");
+        codDesc.setFont(new Font("Arial", Font.ITALIC, 11));
+        codDesc.setForeground(SUBTEXT_COLOR);
+        codDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        final String[] selectedMethod = {null};
+
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnRow.setOpaque(false);
+        btnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton confirmBtn = createIconButton("Confirm Payment");
+        confirmBtn.setBackground(SUCCESS_COLOR);
+        confirmBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (codRadio.isSelected()) selectedMethod[0] = "Cash on Delivery";
+                paymentDialog.dispose();
+            }
+        });
+
+        JButton cancelBtn = createIconButton("Cancel");
+        cancelBtn.setBackground(new Color(55, 65, 81));
+        cancelBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { paymentDialog.dispose(); }
+        });
+
+        btnRow.add(confirmBtn);
+        btnRow.add(cancelBtn);
+
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(6));
+        panel.add(totalLabel);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(codRadio);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(codDesc);
+        panel.add(Box.createVerticalGlue());
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(btnRow);
+
+        paymentDialog.add(panel);
+        paymentDialog.setVisible(true);
+
+        return selectedMethod[0];
+    }
+
     private void confirmOrder() {
         ArrayList<CartManager.CartItem> cartItems = cartManager.getCartItems();
 
@@ -401,33 +480,33 @@ public class OrderProcessing extends JFrame {
         double tax = subtotal * 0.08;
         double total = subtotal + tax;
 
+        // Step 1: select payment method
+        String paymentMethod = showPaymentDialog(total);
+        if (paymentMethod == null) return; // user cancelled
+
+        // Step 2: final confirmation
         int result = JOptionPane.showConfirmDialog(this,
                 "Confirm order placement?\n\n" +
                         "Cart Summary:\n" +
                         "Items: " + cartItems.size() + "\n" +
                         "Subtotal: $" + String.format("%.2f", subtotal) + "\n" +
                         "Tax (8%): $" + String.format("%.2f", tax) + "\n" +
-                        "Total: $" + String.format("%.2f", total) + "\n\n" +
+                        "Total: $" + String.format("%.2f", total) + "\n" +
+                        "Payment: " + paymentMethod + "\n\n" +
                         "Your order will be processed and sent for delivery.",
                 "Confirm Order",
                 JOptionPane.YES_NO_OPTION);
 
         if (result == JOptionPane.YES_OPTION) {
-            // Create order from cart items
             ArrayList<OrderHistory.OrderItem> items = new ArrayList<>();
             for (CartManager.CartItem item : cartItems) {
-                // Get the seller for this product
                 ProductManager.Product product = productManager.getProduct(item.getProductId());
                 String seller = product != null ? product.getSeller() : "Unknown";
-
-                // Create order item with seller info
                 items.add(new OrderHistory.OrderItem(item.getProductName(), seller));
             }
 
-// Get next order ID
             int orderId = OrderHistory.getNextOrderId();
 
-            // Create order record
             OrderHistory.OrderRecord orderRecord = new OrderHistory.OrderRecord(
                     orderId,
                     currentUsername,
@@ -436,13 +515,12 @@ public class OrderProcessing extends JFrame {
                     items,
                     total,
                     "Processing",
-                    getCurrentDate()
+                    getCurrentDate(),
+                    paymentMethod
             );
 
-            // Add to global order history
             OrderHistory.getInstance().addOrder(orderRecord);
 
-            // Replace the preview order in local database with confirmed order
             Order confirmedOrder = new Order(
                     orderId,
                     currentUsername,
@@ -451,26 +529,24 @@ public class OrderProcessing extends JFrame {
                     items,
                     total,
                     "Processing",
-                    getCurrentDate()
+                    getCurrentDate(),
+                    paymentMethod
             );
 
-            // Clear preview orders and add confirmed order
             orderDatabase.clear();
             orderDatabase.add(confirmedOrder);
 
             JOptionPane.showMessageDialog(this,
                     "Order confirmed successfully!\n\n" +
                             "Order ID: #" + orderId + "\n" +
-                            "Total: $" + String.format("%.2f", total) + "\n\n" +
-                            "Your order has been placed and will be processed shortly.\n" +
+                            "Total: $" + String.format("%.2f", total) + "\n" +
+                            "Payment: " + paymentMethod + "\n\n" +
+                            "Our delivery team will collect payment upon arrival.\n" +
                             "Thank you for shopping with NEXUS!",
                     "Order Confirmed",
                     JOptionPane.INFORMATION_MESSAGE);
 
-            // Refresh table to show confirmed order
             refreshOrderTable();
-
-            // Clear the cart after order confirmation
             cartManager.clearCart();
         }
     }
@@ -538,7 +614,7 @@ public class OrderProcessing extends JFrame {
         });
     }
 
-    // Order model with seller tracking
+    // Order model with seller tracking and payment method
     static class Order {
         private int orderId;
         private String buyerUsername;
@@ -548,9 +624,16 @@ public class OrderProcessing extends JFrame {
         private double totalAmount;
         private String status;
         private String orderDate;
+        private String paymentMethod;
 
         public Order(int orderId, String buyerUsername, String email, String deliveryAddress,
                      ArrayList<OrderHistory.OrderItem> items, double totalAmount, String status, String orderDate) {
+            this(orderId, buyerUsername, email, deliveryAddress, items, totalAmount, status, orderDate, "Cash on Delivery");
+        }
+
+        public Order(int orderId, String buyerUsername, String email, String deliveryAddress,
+                     ArrayList<OrderHistory.OrderItem> items, double totalAmount, String status, String orderDate,
+                     String paymentMethod) {
             this.orderId = orderId;
             this.buyerUsername = buyerUsername;
             this.email = email;
@@ -559,42 +642,18 @@ public class OrderProcessing extends JFrame {
             this.totalAmount = totalAmount;
             this.status = status;
             this.orderDate = orderDate;
+            this.paymentMethod = paymentMethod;
         }
 
-        public int getOrderId() {
-            return orderId;
-        }
-
-        public String getBuyerUsername() {
-            return buyerUsername;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public String getDeliveryAddress() {
-            return deliveryAddress;
-        }
-
-        public ArrayList<OrderHistory.OrderItem> getItems() {
-            return items;
-        }
-
-        public double getTotalAmount() {
-            return totalAmount;
-        }
-
-        public String getStatus() {
-            return status;
-        }
-
-        public String getOrderDate() {
-            return orderDate;
-        }
-
-        public void setStatus(String status) {
-            this.status = status;
-        }
+        public int getOrderId() { return orderId; }
+        public String getBuyerUsername() { return buyerUsername; }
+        public String getEmail() { return email; }
+        public String getDeliveryAddress() { return deliveryAddress; }
+        public ArrayList<OrderHistory.OrderItem> getItems() { return items; }
+        public double getTotalAmount() { return totalAmount; }
+        public String getStatus() { return status; }
+        public String getOrderDate() { return orderDate; }
+        public String getPaymentMethod() { return paymentMethod != null ? paymentMethod : "Cash on Delivery"; }
+        public void setStatus(String status) { this.status = status; }
     }
 }

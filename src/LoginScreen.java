@@ -23,6 +23,7 @@ public class LoginScreen extends JFrame {
     private static final Color CLEAR_TEXT_COLOR = new Color(55, 65, 81);
 
     public LoginScreen() {
+        DatabaseManager.initialize();
         setTitle("NEXUS Login - E-Commerce Platform");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(500, 650);

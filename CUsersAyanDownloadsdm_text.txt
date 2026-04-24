@@ -1,0 +1,620 @@
+=== PAGE 1 ===
+Scrum Deliverable
+Sprint 2 Overview
+● Sprint Duration: 3 weeks
+● Sprint Goal: Develop an easy to use, working frontend for Nexus.
+● Modules:
+1. User Authentication & Session Management
+2. Product Catalog & Management
+3. Shopping Cart Management
+4. Order Processing & Placement
+5. User Profile & Account Settings
+
+=== PAGE 2 ===
+Sprint 2 Backlog
+1. As a seller, I want product changes to be visible to all buyers in real-time so that my
+inventory updates are reflected immediately across the platform.
+1.1. Create ProductManager Class
+1.1.1. Implement shared data class
+1.1.2. Develop management methods
+1.2. Integrate ProductManager
+1.2.1. Replace local database with shared data class
+1.2.2. Update all product operations
+2. As a buyer, I want my confirmed orders to appear in my profile immediately so that I can
+track my purchases and order history.
+2.1. Create OrderHistory Class
+2.1.1. Implement shared order storage
+2.1.2. Develop order retrieval methods
+2.2. Integrate OrderHistory with System
+2.2.1. Save orders on confirmation
+2.2.2. Display order details and tracking
+3. As a seller, I want to manage my products with add, edit, and delete functionality so that
+I can maintain my inventory efficiently.
+3.1. Implement Add Functionality
+3.1.1. Form method to input Seller’s Description for Product
+3.1.2. Validate Input
+3.2. Implement Edit Functionality
+3.2.1. Showcase current Product details
+3.2.2. Update ProductCatalog
+3.2.3. Reflect Changes for Buyer
+3.3. Implement Delete Functionality
+3.3.1. Update ProductCatalog
+3.3.2. Reflect Changes for both buyers and sellers
+4. As a buyer, I want to see products from multiple sellers in one catalog so that I can
+browse and compare offerings easily.
+4.1. Implement Multi-Vendor Display
+4.1.1. Display Seller Column
+4.1.2. Display Seller Information
+4.2. Implement Product Detail View
+4.2.1. Display Product Details
+4.2.2. Display Associated Seller
+5. As a buyer, I want to view my order history with details and tracking so that I can monitor
+my purchases and shipments.
+5.1. Create order history Tab in User Profile
+5.1.1. Display order history details
+5.1.2. Show order ID, date, items, etc.
+5.2. Implement Order Details View
+
+=== PAGE 3 ===
+5.2.1. Display Order information through dialog box
+5.2.2. Display delivery address
+6. As a seller, I want to view my sales analytics and metrics so that I can understand my
+business performance.
+6.1. Create Sales Analytics Panel
+6.1.1. Display total orders
+6.1.2. Display total revenue
+6.1.3. Display orders fulfilled
+6.2. Implement Seller Statistics
+6.2.1. Display top performers
+6.2.2. Sales Count & Revenue
+6.2.3. Category Revenue
+7. As a seller, I want to view and manage customer orders so that I can fulfill purchases
+and update order status.
+7.1. Create Order Management Tab
+7.1.1. Display Customer Orders
+7.1.2. Show Order Details
+7.2. Implement Order Status Updates
+7.2.1. Update Order Status
+8. As a user, I want to manage my account settings so that I can maintain security and
+preferences.
+8.1. Implement password change functionality
+8.1.1. Add in Password Validation
+8.1.2. A secure password update
+8.2. Implement Account Security Settings
+8.2.1. Two-factor authentication option
+8.2.2. Session management
+9. As a buyer, I want to manage multiple delivery addresses so that I can quickly select
+delivery locations during checkout.
+9.1. Create Address Management Interface
+9.1.1. Display Saved Addresses
+9.1.2. Add/edit/delete functionalities
+9.2. Implement Address Validation
+9.2.1. Validate Address Format
+9.2.2. Check for duplicates
+10. As a buyer, I want tax to be automatically calculated on my orders so that I know the
+exact total before confirming purchase.
+10.1. Implement Tax Calculation Logic
+10.1.1. Calculate 8% tax on subtotal
+10.1.2. Display in order summary
+10.1.3. Add in final total
+
+=== PAGE 4 ===
+Structured Specifications
+User Story: Product Sharing Across Modules
+Objective: Implement a shared ProductManager Class that maintains real-time synchronization
+of product data across all modules.
+Inputs
+1. Product Data Input (from Seller)
+○ Product Name: String (1-100 characters, non-empty)
+○ Price: Double (minimum 0.01, maximum 999999.99)
+○ Stock Quantity: Integer (0 or positive)
+○ Category: String (Electronics, Accessories, Office, Other)
+○ Description: String (0-500 characters, optional)
+○ Seller ID: String (non-empty, existing seller)
+2. Product Operation Requests
+○ Add Product: ProductManager.addProduct(Product)
+○ Update Product: ProductManager.updateProduct(Product)
+○ Delete Product: ProductManager.deleteProduct(int productId)
+○ Retrieve Product: ProductManager.getProduct(int productId)
+○ List All Products: ProductManager.getAllProducts()
+○ List Seller Products: ProductManager.getSellerProducts(String seller)
+Outputs
+1. Product Database State
+○ ArrayList<Product> containing all current products
+○ Each product with complete details (id, name, seller, price, etc.)
+2. Response Messages
+○ Success: Product added with ID #[id]
+○ Success: Product updated successfully
+○ Success: Product deleted successfully
+○ Error: Product not found
+○ Error: Invalid product data
+3. Real-Time Updates to UI
+○ ProductCatalog table refreshed with new product
+○ Price updates immediately visible to buyers
+○ Deleted products removed from all views
+○ Stock changes reflected instantly
+Processing
+1. Add Product Process
+a. Step 1: Validate input (name not empty, price > 0, valid category)
+
+=== PAGE 5 ===
+b. Step 2: Generate unique product ID (getNextProductId())
+c. Step 3: Create Product object with provided data
+d. Step 4: Add to productDatabase ArrayList
+e. Step 5: Call saveData() for persistence
+f. Step 6: Return product with assigned ID
+2. Update Product Process
+a. Step 1: Validate input (product ID exists, valid data)
+b. Step 2: Find product by ID in productDatabase
+c. Step 3: Update fields (name, price, stock, etc.)
+d. Step 4: Trigger updateProduct(product)
+e. Step 5: Call saveData() for persistence
+f. Step 6: Return success message
+3. Delete Product Process
+a. Step 1: Validate input (product ID exists)
+b. Step 2: Locate product in productDatabase
+c. Step 3: Remove from ArrayList
+d. Step 4: Call saveData() for persistence
+e. Step 5: Notify all modules to refresh
+f. Step 6: Return success confirmation
+4. Product Retrieval Process
+a. Step 1: Request specific product or product list
+b. Step 2: Query productDatabase
+c. Step 3: Return copy of product(s) to prevent external modification
+d. Step 4: Return empty list if no products found
+5. Synchronization Process
+a. Step 1: ProductCatalog calls getInstance()
+b. Step 2: Gets reference to same ProductManager instance
+c. Step 3: Calls getAllProducts() or getSellerProducts()
+d. Step 4: Receives current product data
+e. Step 5: Refreshes table with latest data
+PreConditions
+1. ProductManager singleton must be initialized before first use
+○ Must occur in ProductCatalog constructor
+○ Must occur in ShoppingCart constructor
+○ Must occur in OrderProcessing constructor
+2. Product data must be valid
+○ Name: Non-empty, 1-100 characters
+○ Price: Numeric, minimum $0.01
+
+=== PAGE 6 ===
+○ Stock: Non-negative integer
+○ Category: Valid enumeration value
+3. Seller must exist in system
+○ Seller ID must match authenticated user
+○ Seller must have active account
+4. Database must be accessible
+○ ProductManager must be able to read/write data
+PostConditions
+1. After Add Product:
+a. Product exists in productDatabase
+b. Product has unique ID
+c. Product visible to all buyers immediately
+d. UI components refreshed with new product
+2. After Update Product:
+a. Product fields updated in productDatabase
+b. Changes visible to all users
+c. Buyers see new price/stock immediately
+d. No duplicate products created
+e. Product history maintained (if applicable)
+3. After Delete Product:
+a. Product removed from productDatabase
+b. Product no longer visible in catalog
+c. Buyers cannot add to cart
+d. All references cleared
+e. Change propagated to all modules
+4. After Retrieve/List:
+a. Data returned in consistent format
+b. No modifications to original data
+c. Null/empty safely handled
+d. Performance within acceptable limits
+Exceptions
+1. Invalid Product Data
+○ Condition: Price < 0 or Name is empty
+○ Action: Reject with error message
+○ Message: "Invalid product data: Price must be positive"
+○ Recovery: Return to product form with error highlighted
+2. Product Not Found
+
+=== PAGE 7 ===
+○ Condition: Attempting to update/delete non-existent ID
+○ Action: Throw ProductNotFoundException
+○ Message: "Product with ID [id] not found"
+○ Recovery: Refresh product list and notify user
+3. Duplicate Product Name (per seller)
+○ Condition: Seller tries to create product with same name
+○ Action: Allow with warning (different versions permitted)
+○ Message: "Similar product already exists. Continue?"
+○ Recovery: Show confirmation dialog
+4. Unauthorized Seller
+○ Condition: Seller tries to edit another seller's product
+○ Action: Deny with access error
+○ Message: "You cannot modify another seller's product"
+○ Recovery: Redirect to seller's own products
+5. Database/Persistence Error
+○ Condition: Cannot write to database
+○ Action: Catch exception, notify user
+○ Message: "Failed to save product. Please try again."
+○ Recovery: Retry mechanism or offline mode
+6. Concurrent Modification
+○ Condition: Multiple users modify same product
+○ Action: Last write wins (for Sprint 2 simplicity)
+○ Message: "Product was modified by another user. Refreshing..."
+○ Recovery: Reload and show updated data
+
+=== PAGE 8 ===
+User Story: Order Persistence in User Profile
+Objective: Implement OrderHistory singleton that captures orders when confirmed in
+OrderProcessing and displays them in the UserProfile Order History tab.
+Inputs
+1. Order Creation Input (from OrderProcessing)
+○ Order ID: Integer (auto-generated)
+○ Buyer Username: String (authenticated user)
+○ Email: String (valid email format)
+○ Delivery Address: String (non-empty)
+○ Cart Items: ArrayList<CartItem>
+■ Item Name: String
+■ Item Quantity: Integer (positive)
+■ Item Price: Double (per unit)
+○ Order Total: Double (includes tax)
+○ Order Date: LocalDateTime
+○ Status: String (Processing, Shipped, Delivered)
+2. Order Query Input (from UserProfile)
+○ Query Type: String (getUserOrders, getAllOrders)
+○ Username: String (for filtering)
+○ Date Range: Optional (for filtering)
+Outputs
+1. Order Storage Output
+○ OrderRecord object created and stored
+○ Assigned unique Order ID
+○ Timestamped with creation date
+○ Associated with buyer username
+2. Order Retrieval Output
+○ ArrayList<OrderRecord> for specified user
+○ Sorted by date (newest first)
+○ Complete order details including:
+■ Order ID
+■ All items and quantities
+■ Total amount with tax
+■ Status and date
+■ Delivery address
+3. UI Display Output
+○ Order History table populated with:
+■ Order ID (e.g., #1001)
+■ Order Date
+
+=== PAGE 9 ===
+■ Items (comma-separated or count)
+■ Total Amount ($XX.XX)
+■ Status (Processing/Shipped/Delivered)
+Processing
+1. Order Creation Process (in OrderProcessing.confirmOrder())
+a. Step 1: Validate cart not empty
+b. Step 2: Calculate subtotal from cart items
+c. Step 3: Calculate tax (8% of subtotal)
+d. Step 4: Calculate final total (subtotal + tax)
+e. Step 5: Create OrderRecord object
+f. Step 6: Generate unique Order ID (getNextOrderId())
+g. Step 7: Call OrderHistory.getInstance().addOrder(orderRecord)
+h. Step 8: Return success with Order ID
+i. Step 9: Clear cart after successful order
+2. Order Persistence Process
+a. Step 1: OrderHistory singleton receives order
+b. Step 2: Store in internal orders ArrayList
+c. Step 3: If database available, persist to DB
+d. Step 4: Confirm storage complete
+3. Order Retrieval Process (in UserProfile)
+a. Step 1: Get current authenticated username
+b. Step 2: Call OrderHistory.getInstance().getUserOrders(username)
+c. Step 3: Receive ArrayList<OrderRecord>
+d. Step 4: Filter by date range if specified
+e. Step 5: Sort by date (newest first)
+f. Step 6: Return to calling component
+4. Order Display Process
+a. Step 1: Clear existing table rows
+b. Step 2: For each OrderRecord in list:
+i. Extract order data
+ii. Format as table row
+iii. Add to table model
+c. Step 3: Refresh table display
+d. Step 4: Show "No orders" message if empty
+5. Order Detail Lookup
+a. Step 1: User clicks on order in table
+b. Step 2: Get selected row index
+c. Step 3: Retrieve OrderRecord from list
+
+=== PAGE 10 ===
+d. Step 4: Display details in dialog
+e. Step 5: Allow user to close dialog
+PreConditions
+1. User must be authenticated
+○ Valid username and password logged in
+○ Current session active
+2. Cart must not be empty
+○ At least one item added
+○ Item quantities positive
+○ Items available in inventory
+3. OrderHistory singleton must exist
+○ Initialized before any order operations
+○ Available across modules
+4. Order data must be valid
+○ Delivery address non-empty
+○ Total amount positive
+○ Items list non-empty
+PostConditions
+1. After Order Creation: OrderRecord created and stored Order visible in buyer's Order
+History tab Order has unique ID Order contains all item details Order includes
+calculated total with tax Cart cleared Success message shown with Order ID
+2. After Order Retrieval: All user's orders returned Orders sorted by date Order data
+complete and accurate No orders of other users included Empty list if no orders exist
+3. After Order Display: Order History table populated All columns filled correctly Table
+sortable by any column Selectable for detail view Responsive to window resize
+4. Multiple Orders: Each order has unique ID All orders visible in history Latest orders
+appear first No duplication
+Exceptions
+
+=== PAGE 11 ===
+1. Empty Cart
+○ Condition: User clicks confirm with no items
+○ Action: Show error dialog
+○ Message: "Your cart is empty. Add items before checkout."
+○ Recovery: Return to ProductCatalog
+2. User Not Authenticated
+○ Condition: Accessing order history without login
+○ Action: Redirect to login
+○ Message: "Please log in to view your orders"
+○ Recovery: Complete login process
+3. Order Confirmation Failed
+○ Condition: System error during order creation
+○ Action: Rollback order creation
+○ Message: "Order failed to process. Please try again."
+○ Recovery: Retain cart items, allow retry
+4. No Orders Found
+○ Condition: User has never placed order
+○ Action: Display empty state
+○ Message: "You haven't placed any orders yet"
+○ Recovery: Show link to start shopping
+5. Order Data Corrupted
+○ Condition: Retrieved order has missing/invalid data
+○ Action: Log error, show generic message
+○ Message: "Unable to load order details"
+○ Recovery: Refresh from database or retry
+6. Database Unavailable
+○ Condition: Cannot save order to database
+○ Action: Store in memory temporarily
+○ Message: "Order saved. Database sync pending..."
+○ Recovery: Retry sync when database available
+
+=== PAGE 12 ===
+User Story: Seller Product Management Dashboard
+Objective: Enable sellers to add, edit, and delete their products with real-time visibility to buyers.
+Inputs
+1. Add Product Form Inputs
+○ Product Name: String (1-100 chars)
+○ Price: Double (0.01 - 999999.99)
+○ Stock Quantity: Integer (0+)
+○ Category: Dropdown (Electronics, Accessories, Office, Other)
+○ Description: TextArea (0-500 chars)
+2. Edit Product Form Inputs
+○ All above fields, pre-filled with current data
+○ Product ID: Integer (read-only)
+3. Delete Product Input
+○ Product ID: Integer
+○ Confirmation: Boolean (yes/no dialog)
+Outputs
+1. Add Product Success
+○ New product appears in:
+■ Seller's product list
+■ All buyers' catalogs (immediately)
+○ Confirmation: "Product added successfully! ID: #[id]"
+○ Returns to product list
+2. Edit Product Success
+○ Updated product appears:
+■ Seller's list shows changes
+■ Buyers' catalogs show changes immediately
+○ Confirmation: "Product updated successfully!"
+○ Table refreshes with new data
+3. Delete Product Success
+○ Product removed from:
+■ Seller's list
+■ All buyers' catalogs
+○ Confirmation: "Product deleted successfully!"
+○ Table refreshes
+4. Error Outputs
+○ Validation error: "Please fill in all required fields"
+○ Price error: "Price must be greater than $0.00"
+○ Duplicate: "Similar product already exists"
+
+=== PAGE 13 ===
+Processing
+1. Open Add Product Dialog
+○ Step 1: Click "+ Add Product" button
+○ Step 2: Dialog opens with empty form
+○ Step 3: Set focus to product name field
+○ Step 4: Display category dropdown options
+○ Step 5: Initialize with default category
+2. Submit New Product
+○ Step 1: Validate all inputs
+○ Step 2: Check for empty fields
+○ Step 3: Validate numeric values (price, stock)
+○ Step 4: Generate next product ID
+○ Step 5: Create Product object
+○ Step 6: Call productManager.addProduct()
+○ Step 7: Refresh product table
+○ Step 8: Show success message
+○ Step 9: Close dialog
+3. Open Edit Product Dialog
+○ Step 1: Select product in table
+○ Step 2: Click "Edit" button
+○ Step 3: Dialog opens with form pre-filled
+○ Step 4: Load all product fields
+○ Step 5: Set focus to first field
+○ Step 6: Enable edit mode
+4. Submit Product Update
+○ Step 1: Validate all inputs
+○ Step 2: Check for changes
+○ Step 3: Update Product object
+○ Step 4: Call productManager.updateProduct()
+○ Step 5: Refresh table
+○ Step 6: Show success message
+○ Step 7: Close dialog
+5. Delete Product Process
+○ Step 1: Select product in table
+○ Step 2: Click "Delete" button
+○ Step 3: Show confirmation dialog
+○ Step 4: If confirmed:
+i. Call productManager.deleteProduct()
+ii. Refresh table
+
+=== PAGE 14 ===
+iii. Show success message
+○ Step 5: If cancelled, close dialog
+6. Form Validation Process
+○ Step 1: Name validation:
+i. Not empty
+ii. 1-100 characters
+○ Step 2: Price validation:
+i. Numeric = $0.01
+○ Step 3: Stock validation:
+i. Integer = 0
+○ Step 4: Category validation:
+i. Valid option selected
+○ Step 5: Description validation:
+i. Max 500 characters
+PreConditions
+1. User logged in as seller
+2. Seller account active and verified
+3. ProductManager singleton initialized
+4. Product form UI available
+5. ProductCatalog table accessible
+PostConditions
+1. After Add Product:
+a. Product exists in system
+b. Unique ID assigned
+c. Seller can see in their list
+d. Buyers can see immediately
+e. Dialog closed
+f. Table refreshed
+2. After Edit Product:
+a. Product updated in database
+b. Changes visible to seller
+c. Changes visible to buyers
+d. Stock/price updates reflected
+e. Dialog closed
+f. Table refreshed
+3. After Delete Product:
+a. Product removed from system
+
+=== PAGE 15 ===
+b. No longer visible to seller
+c. No longer visible to buyers
+d. Cannot be added to carts
+e. Dialog closed
+f. Table refreshed
+Exceptions
+1. Validation Failure
+○ Show field-specific error message
+○ Highlight invalid field
+○ Prevent submission
+○ Example: "Price must be a valid decimal number"
+2. Duplicate Name
+○ Allow with warning
+○ Message: "Similar product exists. Create anyway?"
+○ User can confirm or cancel
+3. Seller Unauthorized
+○ Cannot edit/delete another seller's product
+○ Error: "You cannot modify this product"
+○ Redirect to own products
+4. Database Error
+○ Catch exception
+○ Message: "Failed to save product. Try again?"
+○ Offer retry option
+5. Network/Sync Error
+○ Inform user of sync delay
+○ Store locally and sync when available
+○ Message: "Product saved locally. Syncing..."
+
+=== PAGE 16 ===
+User Story: Buyer Order History Tracking
+Objective: Display buyer's order history with ability to view details and tracking info.
+Inputs
+1. View Order History
+○ Username: String (authenticated buyer)
+○ Date Range Filter: Optional (from/to dates)
+○ Status Filter: Optional (Processing/Shipped/Delivered)
+2. View Order Details
+○ Order ID: Integer (selected from table)
+3. Track Order
+○ Order ID: Integer
+Outputs
+1. Order History Table
+○ Columns: Order ID, Date, Items, Total, Status
+○ All buyer's orders listed
+○ Sortable by any column
+○ Selectable for details
+2. Order Details Dialog
+○ Order ID and Status
+○ Order date and time
+○ Delivery address
+○ Item listing (name, qty, price)
+○ Order total with tax breakdown
+3. Order Tracking Info
+○ Order ID
+○ Current status
+○ Tracking number
+○ Estimated delivery date
+○ Shipment timeline (if available)
+Processing
+1. Load Order History
+a. Step 1: Get authenticated username
+b. Step 2: Call OrderHistory.getInstance().getUserOrders(username)
+c. Step 3: Apply date filter if selected
+d. Step 4: Apply status filter if selected
+e. Step 5: Sort by date (newest first)
+f. Step 6: Populate table rows
+
+=== PAGE 17 ===
+g. Step 7: Display result count
+2. View Order Details
+a. Step 1: Get selected order ID from table
+b. Step 2: Retrieve OrderRecord from list
+c. Step 3: Create details dialog
+d. Step 4: Populate all fields
+e. Step 5: Display dialog (modal)
+f. Step 6: Allow close on button click
+3. Track Order
+a. Step 1: Get order ID
+b. Step 2: Retrieve order tracking info
+c. Step 3: Calculate delivery timeline
+d. Step 4: Show in tracking dialog
+e. Step 5: Update status if changed
+f. Step 6: Display estimated delivery
+PreConditions
+1. User authenticated as buyer
+2. User has placed at least one order
+3. OrderHistory populated with orders
+4. Order data valid and complete
+PostConditions
+1. Order history displayed
+2. All orders visible and sortable
+3. Details accessible via click
+4. Tracking info available
+5. Filters functional
+Exceptions
+1. No Orders
+○ Display: "You have no orders yet"
+○ Show link to shop
+2. Invalid Order ID
+○ Error: "Order not found"
+○ Refresh table
+3. Tracking Unavailable
+○ Message: "Tracking info not available yet"
+○ Show estimated delivery instead
+
+=== PAGE 18 ===
+Scrum Board
+Screenshots:
+
+=== PAGE 19 ===
+Sprint 2 Burn-Down Chart
+

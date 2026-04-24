@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version)",
+      "Bash(javac -d out src/*.java)",
+      "PowerShell(Get-Command java -ErrorAction SilentlyContinue; $env:JAVA_HOME; [System.Environment]::GetEnvironmentVariable\\(\"JAVA_HOME\", \"Machine\"\\); Get-ChildItem \"C:\\\\Program Files\\\\Java\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell(cmd /c \"dir C:\\\\`\"Program Files`\"\")",
+      "PowerShell(cmd /c \"dir `\"C:\\\\Program Files\\\\JetBrains`\"\")",
+      "PowerShell(cmd /c \"dir `\"C:\\\\Program Files\\\\Java`\"\")",
+      "PowerShell(cmd /c \"dir `\"C:\\\\Program Files\\\\Android`\"\")",
+      "PowerShell($env:ANDROID_HOME)",
+      "PowerShell($env:ANDROID_SDK_ROOT)",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(node -e \"require\\('docx'\\); console.log\\('docx ok'\\)\")",
+      "PowerShell(node -e \"require\\('docx'\\); console.log\\('ok'\\)\" 2>&1)",
+      "PowerShell(cmd /c \"dir C:\\\\Users\\\\Ayan\\\\AppData\\\\Roaming\\\\nvm 2>nul\")",
+      "PowerShell(cmd /c \"dir C:\\\\Program Files\\\\nodejs 2>nul\")",
+      "PowerShell(cmd /c \"dir C:\\\\nvm 2>nul\")",
+      "PowerShell(python -c \"import docx; print\\('ok'\\)\" 2>&1)",
+      "PowerShell(python -m pip install python-docx -q 2>&1)",
+      "PowerShell(python \"C:\\\\Users\\\\Ayan\\\\Downloads\\\\make_sprint3.py\" 2>&1)",
+      "PowerShell($f = \"C:\\\\Users\\\\Ayan\\\\Downloads\\\\Sprint3_Deliverable.docx\"; \\(Get-Item $f\\).Length / 1KB)"
+    ]
+  }
+}

@@ -1,16 +1,23 @@
+import java.io.Serializable;
 import java.util.*;
 
 /**
- * ProductManager manages shared product data across all modules
- * Ensures sellers' changes are visible to buyers in real-time
+ * ProductManager manages shared product data across all modules.
+ * Products are persisted to disk via DatabaseManager.
  */
 public class ProductManager {
     private static ProductManager instance;
     private ArrayList<Product> productDatabase;
 
     private ProductManager() {
-        this.productDatabase = new ArrayList<>();
-        initializeDefaultProducts();
+        ArrayList<Product> saved = DatabaseManager.loadProducts();
+        if (saved.isEmpty()) {
+            this.productDatabase = new ArrayList<>();
+            initializeDefaultProducts();
+            DatabaseManager.saveProducts(productDatabase);
+        } else {
+            this.productDatabase = saved;
+        }
     }
 
     public static ProductManager getInstance() {
@@ -23,6 +30,7 @@ public class ProductManager {
     // Add product
     public void addProduct(Product product) {
         productDatabase.add(product);
+        DatabaseManager.saveProducts(productDatabase);
     }
 
     // Update product
@@ -30,6 +38,7 @@ public class ProductManager {
         for (int i = 0; i < productDatabase.size(); i++) {
             if (productDatabase.get(i).getId() == product.getId()) {
                 productDatabase.set(i, product);
+                DatabaseManager.saveProducts(productDatabase);
                 return;
             }
         }
@@ -40,6 +49,7 @@ public class ProductManager {
         for (int i = 0; i < productDatabase.size(); i++) {
             if (productDatabase.get(i).getId() == productId) {
                 productDatabase.remove(i);
+                DatabaseManager.saveProducts(productDatabase);
                 return;
             }
         }
@@ -93,7 +103,8 @@ public class ProductManager {
     }
 
     // Product model
-    public static class Product {
+    public static class Product implements Serializable {
+        private static final long serialVersionUID = 1L;
         private int id;
         private String name;
         private String seller;

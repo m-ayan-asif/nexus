@@ -1,5 +1,7 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
@@ -116,6 +118,11 @@ public class ProductCatalog extends JFrame {
 
         searchField = new JTextField(20);
         styleTextField(searchField, "Search products...");
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { refreshTable(); }
+            public void removeUpdate(DocumentEvent e) { refreshTable(); }
+            public void changedUpdate(DocumentEvent e) { refreshTable(); }
+        });
         panel.add(searchField);
 
         viewDetailsButton = createIconButton("View Details");
@@ -126,6 +133,25 @@ public class ProductCatalog extends JFrame {
             }
         });
         panel.add(viewDetailsButton);
+
+        // Reviews button (all users)
+        JButton reviewsButton = createIconButton("Reviews");
+        reviewsButton.setBackground(new Color(79, 70, 229));
+        reviewsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = productsTable.getSelectedRow();
+                if (selectedRow == -1) {
+                    JOptionPane.showMessageDialog(ProductCatalog.this, "Please select a product to view reviews.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int productId = (Integer) tableModel.getValueAt(selectedRow, 0);
+                ProductManager.Product product = productManager.getProduct(productId);
+                if (product == null) return;
+                showReviewsDialog(product);
+            }
+        });
+        panel.add(reviewsButton);
 
         // Buyer buttons
         if (currentUserType.equals("Buyer")) {
@@ -249,26 +275,37 @@ public class ProductCatalog extends JFrame {
     }
 
     private void refreshTable() {
+        if (tableModel == null) return;
         tableModel.setRowCount(0);
+
+        String searchText = "";
+        if (searchField != null) {
+            String raw = searchField.getText().trim().toLowerCase();
+            if (!raw.equals("search products...")) searchText = raw;
+        }
+        final String query = searchText;
+
         ArrayList<ProductManager.Product> allProducts = productManager.getAllProducts();
 
-        if (currentUserType.equals("Seller")) {
-            // Show only seller's products
-            for (ProductManager.Product product : allProducts) {
-                if (product.getSeller().equals(currentUsername)) {
-                    tableModel.addRow(new Object[]{
-                            product.getId(),
-                            product.getName(),
-                            "$" + String.format("%.2f", product.getPrice()),
-                            product.getStock(),
-                            product.getCategory(),
-                            "Active"
-                    });
-                }
-            }
-        } else {
-            // Show all products for buyers
-            for (ProductManager.Product product : allProducts) {
+        for (ProductManager.Product product : allProducts) {
+            boolean matchesSearch = query.isEmpty()
+                    || product.getName().toLowerCase().contains(query)
+                    || product.getCategory().toLowerCase().contains(query)
+                    || product.getSeller().toLowerCase().contains(query)
+                    || product.getDescription().toLowerCase().contains(query);
+            if (!matchesSearch) continue;
+
+            if (currentUserType.equals("Seller")) {
+                if (!product.getSeller().equals(currentUsername)) continue;
+                tableModel.addRow(new Object[]{
+                        product.getId(),
+                        product.getName(),
+                        "$" + String.format("%.2f", product.getPrice()),
+                        product.getStock(),
+                        product.getCategory(),
+                        "Active"
+                });
+            } else {
                 tableModel.addRow(new Object[]{
                         product.getId(),
                         product.getName(),
@@ -380,12 +417,9 @@ public class ProductCatalog extends JFrame {
             return;
         }
 
-        ArrayList<ProductManager.Product> allProducts = productManager.getAllProducts();
-        if (selectedRow >= allProducts.size()) {
-            return;
-        }
-
-        ProductManager.Product selectedProduct = allProducts.get(selectedRow);
+        int productId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        ProductManager.Product selectedProduct = productManager.getProduct(productId);
+        if (selectedProduct == null) return;
 
         JPanel quantityPanel = new JPanel();
         quantityPanel.setLayout(new BoxLayout(quantityPanel, BoxLayout.Y_AXIS));
@@ -450,7 +484,9 @@ public class ProductCatalog extends JFrame {
             return;
         }
 
-        ProductManager.Product product = productDatabase.get(selectedRow);
+        int productId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        ProductManager.Product product = productManager.getProduct(productId);
+        if (product == null) return;
 
         JDialog dialog = new JDialog(this, "Product Details", true);
         dialog.setSize(500, 400);
@@ -809,6 +845,173 @@ public class ProductCatalog extends JFrame {
                         .orElse(0) : 0);
 
         JOptionPane.showMessageDialog(this, stats, "Seller Statistics", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showReviewsDialog(ProductManager.Product product) {
+        ReviewManager reviewManager = ReviewManager.getInstance();
+        ArrayList<ReviewManager.Review> reviews = reviewManager.getProductReviews(product.getId());
+        double avgRating = reviewManager.getAverageRating(product.getId());
+
+        JDialog dialog = new JDialog(this, "Reviews — " + product.getName(), true);
+        dialog.setSize(620, 480);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBackground(CARD_COLOR);
+        mainPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        // Header
+        JPanel headerPanel = new JPanel();
+        headerPanel.setOpaque(false);
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+
+        JLabel nameLabel = new JLabel(product.getName());
+        nameLabel.setFont(new Font("Georgia", Font.BOLD, 18));
+        nameLabel.setForeground(TEXT_COLOR);
+
+        JLabel avgLabel = new JLabel(reviews.isEmpty()
+                ? "No reviews yet"
+                : String.format("%.1f / 5.0  (%d reviews)", avgRating, reviews.size()));
+        avgLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        avgLabel.setForeground(ACCENT_PURPLE);
+
+        headerPanel.add(nameLabel);
+        headerPanel.add(Box.createVerticalStrut(4));
+        headerPanel.add(avgLabel);
+
+        // Reviews table
+        String[] cols = {"Reviewer", "Rating", "Comment", "Date"};
+        DefaultTableModel reviewTableModel = new DefaultTableModel(cols, 0) {
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        for (ReviewManager.Review r : reviews) {
+            reviewTableModel.addRow(new Object[]{r.getReviewerUsername(), r.getStarRating(), r.getComment(), r.getDate()});
+        }
+
+        JTable reviewTable = new JTable(reviewTableModel);
+        styleTable(reviewTable);
+        reviewTable.getColumnModel().getColumn(1).setMaxWidth(80);
+        reviewTable.getColumnModel().getColumn(3).setMaxWidth(100);
+
+        JScrollPane scrollPane = new JScrollPane(reviewTable);
+        scrollPane.getViewport().setBackground(CARD_COLOR);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(55, 65, 81)));
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setOpaque(false);
+
+        if (currentUserType.equals("Buyer")) {
+            JButton writeReviewBtn = createIconButton("Write a Review");
+            writeReviewBtn.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (reviewManager.hasUserReviewed(product.getId(), currentUsername)) {
+                        JOptionPane.showMessageDialog(dialog, "You have already reviewed this product.", "Already Reviewed", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                    showAddReviewDialog(dialog, product, reviewTableModel, avgLabel, reviewManager);
+                }
+            });
+            buttonPanel.add(writeReviewBtn);
+        }
+
+        JButton closeBtn = createIconButton("Close");
+        closeBtn.setBackground(new Color(55, 65, 81));
+        closeBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { dialog.dispose(); }
+        });
+        buttonPanel.add(closeBtn);
+
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+    }
+
+    private void showAddReviewDialog(JDialog parent, ProductManager.Product product,
+                                     DefaultTableModel reviewTableModel, JLabel avgLabel,
+                                     ReviewManager reviewManager) {
+        JDialog addDialog = new JDialog(parent, "Write a Review", true);
+        addDialog.setSize(450, 360);
+        addDialog.setLocationRelativeTo(parent);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        panel.setBackground(CARD_COLOR);
+
+        JLabel ratingLbl = new JLabel("Rating (1–5 stars):");
+        ratingLbl.setFont(new Font("Arial", Font.BOLD, 12));
+        ratingLbl.setForeground(ACCENT_PURPLE);
+
+        JSpinner ratingSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 5, 1));
+        ratingSpinner.setMaximumSize(new Dimension(100, 35));
+
+        JLabel commentLbl = new JLabel("Your Review:");
+        commentLbl.setFont(new Font("Arial", Font.BOLD, 12));
+        commentLbl.setForeground(ACCENT_PURPLE);
+
+        JTextArea commentArea = new JTextArea(5, 30);
+        commentArea.setBackground(new Color(30, 30, 45));
+        commentArea.setForeground(TEXT_COLOR);
+        commentArea.setFont(new Font("Arial", Font.PLAIN, 12));
+        commentArea.setBorder(BorderFactory.createLineBorder(new Color(55, 65, 81)));
+        commentArea.setLineWrap(true);
+        commentArea.setWrapStyleWord(true);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        btnPanel.setOpaque(false);
+
+        JButton submitBtn = createIconButton("Submit Review");
+        submitBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String comment = commentArea.getText().trim();
+                if (comment.isEmpty()) {
+                    JOptionPane.showMessageDialog(addDialog, "Please write a comment.", "Empty Review", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int rating = (Integer) ratingSpinner.getValue();
+                ReviewManager.Review newReview = new ReviewManager.Review(product.getId(), currentUsername, rating, comment);
+                reviewManager.addReview(newReview);
+
+                reviewTableModel.addRow(new Object[]{currentUsername, newReview.getStarRating(), comment, newReview.getDate()});
+
+                double avg = reviewManager.getAverageRating(product.getId());
+                int count = reviewManager.getProductReviews(product.getId()).size();
+                avgLabel.setText(String.format("%.1f / 5.0  (%d reviews)", avg, count));
+
+                addDialog.dispose();
+                JOptionPane.showMessageDialog(parent, "Review submitted! Thank you.", "Review Saved", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
+        JButton cancelBtn = createIconButton("Cancel");
+        cancelBtn.setBackground(new Color(55, 65, 81));
+        cancelBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { addDialog.dispose(); }
+        });
+
+        btnPanel.add(submitBtn);
+        btnPanel.add(cancelBtn);
+
+        panel.add(ratingLbl);
+        panel.add(Box.createVerticalStrut(5));
+        panel.add(ratingSpinner);
+        panel.add(Box.createVerticalStrut(15));
+        panel.add(commentLbl);
+        panel.add(Box.createVerticalStrut(5));
+        panel.add(new JScrollPane(commentArea));
+        panel.add(Box.createVerticalStrut(15));
+        panel.add(btnPanel);
+
+        addDialog.add(panel);
+        addDialog.setVisible(true);
     }
 
     private void styleField(JTextField field) {
